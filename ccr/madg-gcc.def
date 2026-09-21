@@ -1,0 +1,57 @@
+Bootstrap: docker
+From: ubuntu:20.04
+
+# maDGiCart-CH CPU toolchain image for CCR, with FFTW baked in.
+# Replaces madg-gcc-amd64.sif (2024 Docker archive import, no recipe) with a
+# reproducible Apptainer definition. Base ubuntu:20.04 gives gcc 9.4, matching
+# the toolchain the existing prod binary was built with.
+#
+# Build on the CCR compile server (never the login node):
+#   export APPTAINER_CACHEDIR=/projects/academic/kreyes3/Environments/apptainer_cache
+#   export APPTAINER_TMPDIR=/scratch/kreyes3-apptainer   # node-local /scratch; mkdir it first.
+#     NEVER put APPTAINER_TMPDIR on /projects: its filesystem fails OCI xattr
+#     ops during extraction ("remove xattr ... invalid argument").
+#   apptainer build --fakeroot --ignore-fakeroot-command madg-gcc-fftw.sif madg-gcc.def
+#     --fakeroot --ignore-fakeroot-command because the account is not in
+#     /etc/subuid and the injected faked needs a newer GLIBC than ubuntu20.04 has.
+# Or just run build_gcc_fftw_sif.sh on the compile server; it does all of the above.
+#
+# Two fakeroot pitfalls this file works around (both hit in practice):
+# 1. The first line of %post must stay the APT sandbox override: the
+#    single-uid namespace breaks apt's privilege dropping to _apt.
+# 2. libboost-all-dev pulls libboost-mpi -> openmpi -> openssh-client, whose
+#    postinst runs "chgrp ssh-agent /usr/bin/ssh-agent". In the single-uid
+#    namespace that group is unmapped, chgrp fails with "Invalid argument",
+#    and every MPI/boost package depending on it cascades into dpkg error 100.
+#    Fix: divert /bin/chgrp to /bin/true around the install. Group bits are
+#    meaningless in a single-uid image, so the no-op loses nothing.
+
+%post
+    echo 'APT::Sandbox::User "root";' > /etc/apt/apt.conf.d/00no-sandbox
+    set -e
+    export DEBIAN_FRONTEND=noninteractive
+    ln -snf /usr/share/zoneinfo/America/New_York /etc/localtime && echo America/New_York > /etc/timezone
+    apt-get update
+    # chgrp fails on unmapped groups under single-uid fakeroot (see header note 2)
+    dpkg-divert --local --rename --add /bin/chgrp
+    ln -s /bin/true /bin/chgrp
+    apt-get install -y --no-install-recommends \
+        g++ gcc make git ca-certificates wget python3-pip pkg-config \
+        libboost-all-dev libfftw3-dev
+    rm /bin/chgrp
+    dpkg-divert --local --rename --remove /bin/chgrp
+    pip3 install --no-cache-dir 'cmake<4'
+    apt-get clean
+    rm -rf /var/lib/apt/lists/*
+    echo "=== toolchain in image ==="
+    gcc --version | head -1
+    cmake --version | head -1
+    ls /usr/lib/x86_64-linux-gnu/libfftw3.so*
+
+%environment
+    export LC_ALL=C
+
+%labels
+    Project maDGiCart-CH
+    Purpose CPU toolchain (gcc 9.4, cmake<4, boost, FFTW3) build and runtime
+    Base ubuntu:20.04
