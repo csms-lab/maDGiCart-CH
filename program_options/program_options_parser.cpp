@@ -119,6 +119,11 @@ ProgramOptionsParser::ProgramOptionsParser()
       po::value<double>(&Options::get().ch_sigma_)->default_value(291.4488109293305),
       "sigma, the coefficient of the linearly stabilizing term about m. Read directly by solvers "
       "that don't use --eps/--gamma.")(
+      "initial_condition_seed",
+      po::value<unsigned int>(&Options::get().initial_condition_seed_)->default_value(2),
+      "Seed of the random number generator that draws the initial noise about m. The default, 2, is "
+      "the constant the solver used before this option existed. Ignored when an "
+      "initial_condition_file is given.")(
       "eps",
       po::value<double>(&Options::get().ch_eps_)->default_value(0.0),
       "epsilon (NOT epsilon^2). Solvers parameterized by (m, eps, gamma) derive eps2 = eps^2 "

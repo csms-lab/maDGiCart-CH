@@ -9,6 +9,7 @@ class CahnHilliardParameters {
   double eps2() const { return eps2_; }
   double initialMin() const { return initial_value_min_; }
   double initialMax() const { return initial_value_max_; }
+  unsigned int initialSeed() const { return initial_seed_; }
 
  private:
   const double m_                 = Options::get().ch_m();
@@ -16,4 +17,5 @@ class CahnHilliardParameters {
   const double eps2_              = Options::get().ch_eps2();
   const double initial_value_min_ = -0.005;
   const double initial_value_max_ = 0.005;
+  const unsigned int initial_seed_ = Options::get().initial_condition_seed();
 };

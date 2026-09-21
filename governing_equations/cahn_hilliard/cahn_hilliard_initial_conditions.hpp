@@ -16,4 +16,5 @@ class CahnHilliardInitialConditions : public InitialConditions
   const double m_;
   const double min_;
   const double max_;
+  const unsigned int seed_;
 };

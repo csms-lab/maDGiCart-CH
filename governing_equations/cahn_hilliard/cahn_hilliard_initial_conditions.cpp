@@ -7,7 +7,7 @@
 
 
 CahnHilliardInitialConditions::CahnHilliardInitialConditions(CahnHilliardParameters& params)
-    : m_(params.m()), min_(params.initialMin()), max_(params.initialMax())
+    : m_(params.m()), min_(params.initialMin()), max_(params.initialMax()), seed_(params.initialSeed())
 {
 }
 
@@ -15,10 +15,10 @@ CahnHilliardInitialConditions::CahnHilliardInitialConditions(CahnHilliardParamet
 void
 CahnHilliardInitialConditions::set(const TimeIntegrableRHS& rhs, SolutionState& state) const
 {
-  std::random_device rd;  // Will be used to obtain a seed for the random number engine
-  //  std::mt19937 gen(rd()); // Standard mersenne_twister_engine seeded with rd()
-  std::mt19937                            gen(2);  // Standard mersenne_twister_engine seeded with 1
+  // Seeded from --initial_condition_seed, whose default of 2 is the constant used before the option existed.
+  std::mt19937                            gen(seed_);
   std::uniform_real_distribution<real_wp> dist(min_, max_);
+  Logger::get().InfoMessage("RNG initial conditions drawn with seed " + std::to_string(seed_) + ".");
 
 
   auto idx = read_access_host(rhs.interiorIndices());
