@@ -205,6 +205,15 @@ Puppeteer::timeIntegratorFactory(TimeIntegrableRHS& rhs)
   if (solution_reader_) {
     solution_reader_->setInitialTimeStep(time_opts);
   }
+#ifndef MADG_HAVE_SPECTRAL
+  const std::string& requested = Options::get().time_integrator();
+  if (requested == "fft_si" || requested == "fft_semi_implicit" || requested == "dct_si" ||
+      requested == "dct_semi_implicit") {
+    Logger::get().FatalMessage(
+        "Time integrator '" + requested + "' is not in this build. The spectral integrators transform on "
+        "the host with FFTW3 and are built only with FFTW3 present and no GPU back end.");
+  }
+#endif
   return FactoryRegistry<TimeIntegrator>::get().lookup(Options::get().time_integrator())(rhs, time_opts);
 }
 

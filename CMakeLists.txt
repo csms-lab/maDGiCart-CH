@@ -5,12 +5,10 @@ include(ExternalProject)
 
 find_package(Boost REQUIRED COMPONENTS regex program_options log log_setup filesystem thread)
 
+# FFTW3 is optional. It is needed only by the spectral integrators (fft_si, dct_si); whether
+# they are built is decided below, once the back end is known.
 find_path(FFTW3_INCLUDE_DIR fftw3.h)
 find_library(FFTW3_LIB fftw3)
-if(NOT FFTW3_INCLUDE_DIR OR NOT FFTW3_LIB)
-  message(FATAL_ERROR "FFTW3 not found. Set CMAKE_PREFIX_PATH (or FFTW3_ROOT) to your FFTW install. "
-                       "Needed by time_stepping/dct_semi_implicit.cpp.")
-endif()
 
 set(CXX_COMPILER_STRING "${CMAKE_CXX_COMPILER} ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
 add_definitions(-DCXX_COMPILER_STRING="${CXX_COMPILER_STRING}")
@@ -72,6 +70,25 @@ if (MADG_USE_OPENMP)
   set(MADG_USE_SERIAL OFF)
   MESSAGE(STATUS "MADG_USE_OPENMP specified, setting MADG_USE_SERIAL Off.")
   find_package(OpenMP REQUIRED)
+endif()
+
+# The spectral integrators transform on the host with FFTW3, so they are built only where
+# that works: FFTW3 found, and no GPU back end. A build without them does not register
+# fft_si or dct_si, and a run that asks for one stops with a message saying so.
+if(FFTW3_INCLUDE_DIR AND FFTW3_LIB AND NOT MADG_USE_GPU)
+  set(MADG_BUILD_SPECTRAL ON)
+  add_definitions(-DMADG_HAVE_SPECTRAL)
+  MESSAGE(STATUS "Spectral integrators (fft_si, dct_si): built, FFTW3 at ${FFTW3_LIB}.")
+else()
+  set(MADG_BUILD_SPECTRAL OFF)
+  set(FFTW3_INCLUDE_DIR "")
+  set(FFTW3_LIB "")
+  if(MADG_USE_GPU)
+    MESSAGE(STATUS "Spectral integrators (fft_si, dct_si): not built, they run on the host only.")
+  else()
+    MESSAGE(STATUS "Spectral integrators (fft_si, dct_si): not built, FFTW3 not found. "
+                   "Set CMAKE_PREFIX_PATH (or FFTW3_ROOT) to an FFTW install to build them.")
+  endif()
 endif()
 
 if(MADG_USE_SERIAL)

@@ -3,12 +3,14 @@ set(time_stepping_src
         rk3ssp.cpp
         ode23.cpp
         euler.cpp
-        fft_semi_implicit.cpp
-        dct_semi_implicit.cpp
         petsc_time_integrator.cpp
         petsc_environment.cpp
         bdf_multigrid.cpp
         ode23_smoother.cpp)
+
+if(MADG_BUILD_SPECTRAL)
+    list(APPEND time_stepping_src fft_semi_implicit.cpp dct_semi_implicit.cpp)
+endif()
 
 if(MADG_USE_CUDA)
     message(STATUS "Building libtime_stepping with CUDA support.")
